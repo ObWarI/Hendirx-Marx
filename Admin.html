@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f7f7f7;
+    }
+    select, button {
+      margin: 10px 0;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      cursor: pointer;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 5px 10px;
+      margin-right: 5px;
+    }
+    .accept { background-color: #28a745; }
+    .reject { background-color: #dc3545; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+    #roleStats span {
+      font-weight: bold;
+      margin-right: 15px;
+    }
+  </style>
+  <script>
+    let selectedEvent = "";
+
+    // Events laden
+    function loadEvents() {
+      google.script.run.withSuccessHandler(function(events){
+        const sel = document.getElementById('eventSelect');
+        sel.innerHTML = '<option value="">-- Event auswählen --</option>';
+        events.forEach(ev => {
+          const opt = document.createElement('option');
+          opt.value = ev;
+          opt.textContent = ev;
+          sel.appendChild(opt);
+        });
+      }).getEventNames();
+    }
+
+    // Eventwechsel
+    function onEventChange() {
+      selectedEvent = document.getElementById('eventSelect').value;
+      if(!selectedEvent) return;
+      loadSubmissions();
+      loadRoleStats();
+      loadCancellations(); // Ausstehende Absagen laden
+    }
+
+    // Anmeldungen für Event
+    function loadSubmissions() {
+      if(!selectedEvent) return;
+      google.script.run.withSuccessHandler(function(data){
+        const table = document.getElementById('submissionTable');
+        table.innerHTML = '<tr><th>E-Mail</th><th>Rolle</th><th>Status</th><th>Aktion</th></tr>';
+        data.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${row.email}</td><td>${row.role}</td><td>${row.status}</td>`;
+          const td = document.createElement('td');
+
+          if(row.status === 'Angemeldet') {
+            const btnAccept = document.createElement('button');
+            btnAccept.textContent = 'Zusage';
+            btnAccept.className = 'accept';
+            btnAccept.onclick = function() {
+              google.script.run.withSuccessHandler(() => {
+                loadSubmissions();
+                loadRoleStats();
+              }).adminAction(selectedEvent, row.email, 'akzeptiert', '');
+            };
+            td.appendChild(btnAccept);
+
+            const btnReject = document.createElement('button');
+            btnReject.textContent = 'Absage';
+            btnReject.className = 'reject';
+            btnReject.onclick = function() {
+              const reason = prompt('Grund für Absage:');
+              google.script.run.withSuccessHandler(() => {
+                loadSubmissions();
+                loadRoleStats();
+                loadCancellations();
+              }).adminAction(selectedEvent, row.email, 'abgelehnt', reason || '');
+            };
+            td.appendChild(btnReject);
+          } else {
+            td.textContent = "-";
+          }
+
+          tr.appendChild(td);
+          table.appendChild(tr);
+        });
+      }).getPendingSubmissionsForEvent(selectedEvent);
+    }
+
+    // Rollen-Status
+    function loadRoleStats() {
+      if(!selectedEvent) return;
+      google.script.run.withSuccessHandler(function(stats){
+        const statsDiv = document.getElementById('roleStats');
+        statsDiv.innerHTML = '';
+        for(const role in stats){
+          const r = stats[role];
+          const span = document.createElement('span');
+          span.textContent = `${role}: ${r.angemeldet}/${r.max} (${r.offen} offen)`;
+          if(r.voll) span.style.color = 'green';
+          statsDiv.appendChild(span);
+        }
+      }).getEventRoleStats(selectedEvent);
+    }
+
+    // Ausstehende Absagen laden
+    function loadCancellations() {
+      if(!selectedEvent) return;
+      google.script.run.withSuccessHandler(function(data){
+        const table = document.getElementById('cancellationTable');
+        table.innerHTML = '<tr><th>Mitarbeiter</th><th>Rolle</th><th>Grund</th><th>Aktion</th></tr>';
+        data.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${row.email}</td><td>${row.role}</td><td>${row.reason}</td>`;
+          const td = document.createElement('td');
+          const btn = document.createElement('button');
+          btn.textContent = 'Ok';
+          btn.className = 'accept';
+          btn.onclick = function() {
+  google.script.run.withSuccessHandler(() => {
+    loadCancellations();
+    loadSubmissions();
+    loadRoleStats();
+  }).adminConfirmCancellation(row.email, selectedEvent, row.role); // Rolle übergeben!
+};
+          td.appendChild(btn);
+          tr.appendChild(td);
+          table.appendChild(tr);
+        });
+      }).getPendingCancellationsForEvent(selectedEvent);
+    }
+
+    window.onload = loadEvents;
+  </script>
+</head>
+<body>
+  <h2>Admin: Event-Anmeldungen verwalten</h2>
+
+  <label>Event auswählen:</label>
+  <select id="eventSelect" onchange="onEventChange()"></select>
+
+  <h3>Rollen-Status</h3>
+  <div id="roleStats"></div>
+
+  <h3>Anmeldungen</h3>
+  <table id="submissionTable"></table>
+
+  <h3>Ausstehende Absagen</h3>
+  <table id="cancellationTable"></table>
+</body>
+</html>

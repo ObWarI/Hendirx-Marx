@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 30px; background: #f7f7f7; }
+    input, label, button { display: block; margin: 10px 0; padding: 8px; width: 300px; }
+    button { background-color: #28a745; color: white; cursor: pointer; border: none; border-radius: 5px; }
+    button:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <h2>Neues Event erstellen</h2>
+  <label>Datum (dd/mm/yyyy)</label>
+  <input type="text" id="date">
+
+  <label>Standort</label>
+  <input type="text" id="location">
+
+  <label>Von (HH:mm)</label>
+  <input type="text" id="from">
+
+  <label>Bis (HH:mm)</label>
+  <input type="text" id="to">
+
+  <label>Max Service</label>
+  <input type="number" id="maxService">
+
+  <label>Max Küche</label>
+  <input type="number" id="maxKueche">
+
+  <label>Max Theke</label>
+  <input type="number" id="maxTheke">
+
+  <label>Max Logistik</label>
+  <input type="number" id="maxLogistik">
+
+  <label>Max Parkplatzmanagement</label>
+  <input type="number" id="maxParkplatz">
+
+  <label>Max Garderobe</label>
+  <input type="number" id="maxGarderobe">
+
+  <button onclick="createAdminEventForm()">Event erstellen</button>
+
+  <script>
+    function createAdminEventForm() {
+      const eventData = {
+        date: document.getElementById('date').value,
+        location: document.getElementById('location').value,
+        from: document.getElementById('from').value,
+        to: document.getElementById('to').value,
+        maxService: document.getElementById('maxService').value,
+        maxKueche: document.getElementById('maxKueche').value,
+        maxTheke: document.getElementById('maxTheke').value,
+        maxLogistik: document.getElementById('maxLogistik').value,
+        maxParkplatz: document.getElementById('maxParkplatz').value,
+        maxGarderobe: document.getElementById('maxGarderobe').value
+      };
+      google.script.run.withSuccessHandler(function() {
+        alert("Event erfolgreich erstellt!");
+        window.location.href = "<?= ScriptApp.getService().getUrl() ?>?admin=true";
+      }).createAdminEvent(eventData);
+    }
+  </script>
+</body>
+</html>

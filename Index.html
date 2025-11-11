@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f7f7f7;
+    }
+    h2, h3 { color: #333; }
+    select, button {
+      margin: 8px 0;
+      padding: 8px;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover { background-color: #0056b3; }
+    .disabled {
+      background-color: #ddd;
+      color: #777;
+      pointer-events: none;
+    }
+    .cancel-btn {
+      background-color: #dc3545;
+      margin-top: 5px;
+    }
+  </style>
+  <script>
+    let selectedEvent = "";
+    let selectedRole = "";
+
+    function loadEvents() {
+      // Dropdown für neue Anmeldung
+      google.script.run.withSuccessHandler(function(events) {
+        const eventSelect = document.getElementById('eventSelect');
+        eventSelect.innerHTML = '<option value="">-- Event auswählen --</option>';
+        events.forEach(ev => {
+          const opt = document.createElement('option');
+          opt.value = ev;
+          opt.textContent = ev;
+          eventSelect.appendChild(opt);
+        });
+      }).getEventNames();
+
+      // Liste angemeldeter Events laden
+      google.script.run.withSuccessHandler(function(list) {
+        const myEventsDiv = document.getElementById('myEvents');
+        myEventsDiv.innerHTML = "";
+        if(list.length === 0) {
+          myEventsDiv.innerHTML = "<p>Du bist aktuell für keine Events angemeldet.</p>";
+          return;
+        }
+        list.forEach(ev => {
+          const div = document.createElement('div');
+          div.innerHTML = `<b>${ev.event}</b> - Rolle: ${ev.role}`;
+          const btn = document.createElement('button');
+          btn.textContent = "Absagen";
+          btn.className = "cancel-btn";
+          btn.onclick = () => cancelParticipation(ev.event, ev.role);
+          div.appendChild(btn);
+          myEventsDiv.appendChild(div);
+        });
+      }).getMyRegistrations(); // neue Apps Script Funktion
+    }
+
+    function onEventChange() {
+      selectedEvent = document.getElementById('eventSelect').value;
+      if (!selectedEvent) return;
+
+      // Standort anzeigen
+      google.script.run.withSuccessHandler(function(location) {
+        document.getElementById('location').textContent = location;
+      }).getEventLocation(selectedEvent);
+
+      // Verfügbare Rollen laden
+      google.script.run.withSuccessHandler(function(roles) {
+        const rolesDiv = document.getElementById('roles');
+        rolesDiv.innerHTML = "";
+        const allRoles = ["Service","Küche","Theke","Logistik","Parkplatzmanagement","Garderobe"];
+        allRoles.forEach(role => {
+          const btn = document.createElement('button');
+          btn.textContent = role;
+          if (!roles.includes(role)) {
+            btn.classList.add('disabled');
+            btn.textContent = role + " (voll)";
+          } else {
+            btn.onclick = () => selectRole(role);
+          }
+          rolesDiv.appendChild(btn);
+        });
+      }).getAvailableRoles(selectedEvent);
+    }
+
+    function selectRole(role) {
+      selectedRole = role;
+      document.getElementById('chosenRole').textContent = "Gewählte Rolle: " + role;
+    }
+
+    function submitForm() {
+      if (!selectedEvent || !selectedRole) {
+        alert("Bitte Event und Rolle auswählen!");
+        return;
+      }
+
+      google.script.run.withSuccessHandler(function(res) {
+        alert(res.message);
+        selectedRole = "";
+        document.getElementById('chosenRole').textContent = "";
+        loadEvents();
+      }).submitEmployeeAuto(selectedEvent, selectedRole);
+    }
+
+   function cancelParticipation(eventName, role) {
+  const reason = prompt("Grund der Absage (optional):");
+  google.script.run.withSuccessHandler(() => {
+    alert("Absage wurde an den Admin gesendet.");
+    loadEvents();
+  }).employeeCancelAutoForEvent(eventName, role, reason);
+}
+
+    window.onload = loadEvents;
+  </script>
+</head>
+<body>
+  <h2>Mitarbeiter Event-Anmeldung</h2>
+
+  <label>Event auswählen:</label>
+  <select id="eventSelect" onchange="onEventChange()"></select>
+
+  <p><b>Standort:</b> <span id="location">-</span></p>
+
+  <h3>Verfügbare Rollen:</h3>
+  <div id="roles"></div>
+
+  <p id="chosenRole" style="font-weight:bold; color:#007bff;"></p>
+
+  <button onclick="submitForm()">Anmelden</button>
+
+  <h3>Meine angemeldeten Events:</h3>
+  <div id="myEvents"></div>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 50px;
+      background: #f2f2f2;
+      text-align: center;
+    }
+    h2 { color: #333; margin-bottom: 40px; }
+    button {
+      display: block;
+      width: 250px;
+      margin: 20px auto;
+      padding: 15px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      color: white;
+    }
+    .manage { background-color: #007bff; }
+    .create { background-color: #28a745; }
+    .absences { background-color: #dc3545; }
+    button:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <h2>Admin Dashboard</h2>
+  <button class="manage" onclick="openManagement()">Event-Verwaltung</button>
+  <button class="create" onclick="openCreation()">Event-Erstellung</button>
+  <button class="absences" onclick="openAbsences()">Ausstehende Absagen</button>
+
+  <script>
+    function openManagement() {
+      window.location.href = "<?= ScriptApp.getService().getUrl() ?>?admin=true&section=manage";
+    }
+
+    function openCreation() {
+      window.location.href = "<?= ScriptApp.getService().getUrl() ?>?admin=true&section=create";
+    }
+
+    function openAbsences() {
+      window.location.href = "<?= ScriptApp.getService().getUrl() ?>?admin=true&section=absences";
+    }
+  </script>
+</body>
+</html>
